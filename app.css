@@ -71,6 +71,25 @@ body.dusk { background-color: #ECE6DA; }
   gap: 18px;
 }
 
+/* минимальный интерфейс: только сцена + кнопка, по центру экрана */
+.wrap.minimal {
+  max-width: 420px;
+  min-height: 100vh;
+  justify-content: center;
+  gap: 26px;
+  padding: 24px 20px;
+}
+.wrap.minimal .well { max-width: 360px; align-self: center; }
+.wrap.minimal .action { max-width: 360px; }
+/* малозаметные иконки доступа в углу панели */
+.corner { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 2; }
+.corner-btn {
+  background: rgba(244,241,234,0.72); border: none; border-radius: 6px;
+  width: 30px; height: 30px; cursor: pointer; color: var(--ink-soft);
+  font-size: 15px; line-height: 1; backdrop-filter: blur(2px);
+}
+.corner-btn:hover { background: var(--marble); color: var(--ink); }
+
 /* ───────────────────────── Шапка ───────────────────────── */
 .header { display: flex; align-items: baseline; justify-content: space-between; }
 .header::after { /* волосок под шапкой */
