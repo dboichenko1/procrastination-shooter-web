@@ -4,7 +4,7 @@
    Все пути относительные — работает и из корня домена, и из подпапки
    project-страницы GitHub Pages. */
 
-const VERSION = 'ps-shell-v6';
+const VERSION = 'ps-shell-v7';
 
 const SHELL = [
   './',
