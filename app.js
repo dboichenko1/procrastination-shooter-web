@@ -276,7 +276,7 @@ if (typeof globalThis !== 'undefined') {
 // ════════════════════════════════════════════════════════════════════
 
 var S, els = {};
-var reduceMotion = false, audio = null;
+var reduceMotion = false;
 var checkinTimer = null, lastQuote = null, deferredInstall = null;
 var saveTimer = null, memoryFallback = false;
 var crestSeen = 0;          // сколько срывов уже «увидели» (чтобы не слать пачку уведомлений)
@@ -387,19 +387,23 @@ function buildUI() {
   ]);
   well.appendChild(corner);
 
+  var timer = el('div', { class: 'timer' }, '0:00');   // видимое время сессии
+  els.timer = timer;
+
   var action = el('button', { class: 'action', type: 'button' });
   els.action = action;
   wireAction(action);
 
   var statsBtn = el('button', { class: 'subaction', type: 'button', text: 'Статистика', onclick: openStats });
 
-  appendKids(wrap, [well, action, statsBtn]);
+  appendKids(wrap, [well, timer, action, statsBtn]);
   root.appendChild(wrap);
 
   els.sr = el('div', { class: 'sr-only', 'aria-live': 'assertive' });
   root.appendChild(els.sr);
 
   updateActionButton();
+  updateMeta();
 }
 
 // Сцена в стиле постмодерн/Мемфис (CSS+SVG анимация Сизифа из «Sisyphus Postmodern»).
@@ -488,15 +492,13 @@ function toggleRolling() { if (S.current.running) stopRolling(); else startRolli
 
 function startRolling() {
   if (S.current.running) return;
-  ensureAudio();
   S.current.running = true;
   S.current.startTs = now();
   S.current.sessionStartTs = S.current.startTs;
   crestSeen = 0;
-  if (audio) audio.start();
   if (navigator.vibrate) { try { navigator.vibrate(14); } catch (e) {} }
   updateActionButton();
-  showRollingLine();
+  updateMeta();
   announce('Сизиф покатил камень. Таймер прокрастинации пошёл.');
   scheduleSave(true);
 }
@@ -520,18 +522,10 @@ function stopRolling(silent) {
   S.current.running = false;
   S.current.startTs = null;
   crestSeen = 0;
-  if (audio) audio.chime();
   updateActionButton();
+  updateMeta();
   scheduleSave(true);
-
-  if (!silent) {
-    var t = formatDuration(ms);
-    var line = task ? COPY.stopConfirmTask.replace('{t}', t).replace('{task}', task) : COPY.stopConfirm.replace('{t}', t);
-    nextQuote(); // вернулся к делу — сторож оставляет тебе свежую стоическую мысль (покажется после строки)
-    showQuoteLine({ t: line, a: '' }, 5000);
-    announce('Вернулся к делу. ' + t + ' прокрастинации записано.');
-    dropLeaf();
-  }
+  if (!silent) announce('Стоп. ' + formatDuration(ms) + ' прокрастинации записано.');
 }
 
 function updateActionButton() {
@@ -545,8 +539,6 @@ function updateActionButton() {
 // ───────────────────────── Срыв камня + уведомление ─────────────────────────
 function onCrest() {
   if (!reduceMotion) rollbackFlashUntil = now() + 700;
-  if (audio) audio.thud();
-  showQuoteLine({ t: COPY.rollback[Math.floor(Math.random() * COPY.rollback.length)], a: '' }, 2600);
   // уведомление о срыве — с лимитом частоты и вне тихих часов
   var d = new Date(now()), mins = d.getHours() * 60 + d.getMinutes();
   if (canNotify() && Notification.permission === 'granted' && shouldNudge(S.notif.lastNudgeTs, now(), mins, S.settings.quietHours)) {
@@ -586,29 +578,6 @@ function pickQuoteForPatron() {
   return pool[S.quoteIndex % pool.length];
 }
 function announce(t) { if (els.sr) els.sr.textContent = t; }
-
-// ───────────────────────── Звук (WebAudio, синтез без файлов) ─────────────────────────
-function ensureAudio() { if (!audio && S.settings.soundOn) audio = createAudio(); }
-function createAudio() {
-  var Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return null;
-  var ctx = new Ctx();
-  function env(node, t0, peak, dur) {
-    var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    node.connect(g); g.connect(ctx.destination); return g;
-  }
-  function noiseBuf(dur) { var n = Math.floor(ctx.sampleRate * dur), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0); for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; return b; }
-  function resume() { if (ctx.state === 'suspended') ctx.resume(); }
-  function muted() { return !S.settings.soundOn; }
-  return {
-    start: function () { if (muted()) return; resume(); var t = ctx.currentTime; var o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.18); env(o, t, 0.12, 0.22); o.start(t); o.stop(t + 0.24); },
-    thud: function () { if (muted()) return; resume(); var t = ctx.currentTime; var o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.45); env(o, t, 0.28, 0.5); o.start(t); o.stop(t + 0.55); var ns = ctx.createBufferSource(); ns.buffer = noiseBuf(0.12); var bp = ctx.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 300; ns.connect(bp); env(bp, t, 0.12, 0.12); ns.start(t); ns.stop(t + 0.12); },
-    chime: function () { if (muted()) return; resume(); var t = ctx.currentTime; var o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 523; env(o, t, 0.12, 0.5); o.start(t); o.stop(t + 0.55); },
-  };
-}
 
 // ───────────────────────── Уведомления ─────────────────────────
 function canNotify() { return typeof Notification !== 'undefined'; }
@@ -681,11 +650,6 @@ function hideSheet() {
   var ret = els.sheetReturnFocus; els.sheetReturnFocus = null;
   if (ret && ret.focus) { try { ret.focus(); } catch (e) {} }
   setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 400);
-}
-function dropLeaf() {
-  var leaf = el('div', { class: 'leaf', 'aria-hidden': 'true', text: '🍃' });
-  document.body.appendChild(leaf);
-  setTimeout(function () { if (leaf.parentNode) leaf.parentNode.removeChild(leaf); }, 2500);
 }
 var bannerTimer = null;
 function toast(msg) {
@@ -768,7 +732,6 @@ function deleteSession(startTs) {
 // ───────────────────────── Настройки ─────────────────────────
 function openSettings() {
   var rows = [];
-  rows.push(settingsRow('Звук', 'короткие синтезированные звуки', switchCtl(S.settings.soundOn, function (on) { S.settings.soundOn = on; if (on) ensureAudio(); scheduleSave(true); }, 'Звук')));
   var notifOn = canNotify() && Notification.permission === 'granted';
   rows.push(settingsRow('Колокол сторожа', notifOn ? 'почасовая проверка совести включена' : 'почасовое «не прокрастинируешь ли, братец?»',
     switchCtl(notifOn, function (on, input) { if (on) requestNotifPermission(); else { toast('Отозвать разрешение можно в настройках браузера.'); input.checked = notifOn; } }, 'Колокол сторожа')));
@@ -776,9 +739,6 @@ function openSettings() {
   var startInp = el('input', { class: 'time-input', type: 'time', value: qh.start, 'aria-label': 'начало тихих часов', onchange: function () { qh.start = startInp.value; scheduleSave(true); } });
   var endInp = el('input', { class: 'time-input', type: 'time', value: qh.end, 'aria-label': 'конец тихих часов', onchange: function () { qh.end = endInp.value; scheduleSave(true); } });
   rows.push(settingsRow('Тихие часы', 'колокол молчит', el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;align-items:center' }, [switchCtl(qh.enabled, function (on) { qh.enabled = on; scheduleSave(true); }, 'Тихие часы'), startInp, el('span', { text: '–' }), endInp])));
-  var sel2 = el('select', { class: 'time-input', 'aria-label': 'наставник', onchange: function () { S.settings.patron = sel2.value; lastQuote = null; scheduleSave(true); showIdleOrQuote(); } });
-  [['rotate', 'ротация'], ['marcus', 'Марк Аврелий'], ['seneca', 'Сенека'], ['epictetus', 'Эпиктет'], ['camus', 'Камю']].forEach(function (o) { var op = el('option', { value: o[0], text: o[1] }); if (S.settings.patron === o[0]) op.selected = true; sel2.appendChild(op); });
-  rows.push(settingsRow('Наставник', 'чей голос звучит в мыслях', sel2));
 
   var exportBtn = el('button', { class: 'link-btn', type: 'button', text: 'экспорт данных', onclick: exportData });
   var importBtn = el('button', { class: 'link-btn', type: 'button', text: 'импорт', onclick: importData });
@@ -859,16 +819,19 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 
+// Таймер «ч:мм:сс» / «м:сс» — видимое время текущей сессии прокрастинации.
+function fmtTimer(ms) {
+  var s = Math.max(0, Math.floor(ms / 1000));
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+  return h > 0 ? (h + ':' + p2(m) + ':' + p2(ss)) : (m + ':' + p2(ss));
+}
 function updateMeta() {
-  if (!els.today) { updateCheckinFooter(); return; }   // минимальный интерфейс — без метаданных
-  var sum = summarize(S.sessions, S.lifetime, now());
-  var liveToday = sum.todayMs + (S.current.running && S.current.startTs ? (now() - S.current.startTs) : 0);
-  els.today.textContent = COPY.todayLabel.replace('{t}', formatHM(liveToday));
-  if (S.current.running && S.current.startTs) els.timer.textContent = COPY.rollingLabel.replace('{t}', formatDuration(now() - S.current.startTs));
-  else els.timer.textContent = '';
-  var n = S.streak.returnsToday || 0;
-  els.returns.textContent = COPY.returns.replace('{n}', n);
-  els.returns.className = 'recovery' + (n === 0 ? ' zero' : '');
+  if (els.timer) {
+    var on = S.current.running && S.current.startTs;
+    els.timer.textContent = on ? fmtTimer(now() - S.current.startTs) : '0:00';
+    els.timer.className = 'timer' + (on ? ' on' : '');
+  }
   updateCheckinFooter();
 }
 
@@ -902,7 +865,6 @@ function boot() {
   if (S.current.running && S.current.startTs) crestSeen = crestCount(now() - S.current.startTs, CLIMB_MS, ROLLBACK_MS);
 
   updateMeta();
-  if (S.current.running) ensureAudio();
   scheduleSave(true);
 
   window.addEventListener('keydown', function (e) {
