@@ -1,0 +1,323 @@
+/* Сторож — прокрастинатор-шутер. Веб-версия, ванильный CSS без зависимостей.
+   Эстетика: тёплая мраморная бумага записной книжки стоика. Тишина и воздух;
+   единственный цвет (тёплая терракота) принадлежит только моменту падения и
+   счётчику «поймал себя». Никакого аркадного шума — пока ты не провалился. */
+
+:root {
+  /* ── Палитра (из дизайн-брифа) ── */
+  --marble: #F4F1EA;        /* мраморная бумага — фон страницы */
+  --marble-inset: #EFEBE2;  /* бледнее — врезка панели колодца */
+  --strata-1: #E3DDCF;      /* верхний песчаный слой */
+  --strata-2: #CDBE9F;      /* охра / древесина ветки */
+  --strata-3: #9A8C72;      /* глубокая земля */
+  --strata-4: #4A4036;      /* умбра, бездна */
+  --ink: #2B2722;           /* чернила: фигурка, линии, основной текст */
+  --ink-soft: #5C564B;      /* мягкие чернила: вторичный текст */
+  --muted: #6E6757;         /* приглушённый: трекинг-метки, неактивный тумблер (контраст AA на мраморе) */
+  --hairline: #C9C2B4;      /* линия-волосок */
+  --sawdust: #E8D2A0;       /* опилки / пыль в режиме ветки */
+  --terracotta: #A85C3B;    /* ЕДИНСТВЕННЫЙ акцент: черта падения, счётчик спасений, тревога */
+  --abyss: #1A1714;         /* почти чёрный: виньетка падения */
+  --sage: #7E9B7A;          /* шалфейно-зелёный: чистые дни на графике, подтверждение «иду работать» */
+
+  --serif: Georgia, 'Times New Roman', 'PT Serif', serif;
+  --maxw: 560px;
+  --panel-w: 300px;
+  --panel-h: 360px;
+  --radius: 4px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--marble);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* мягкое зерно бумаги, чтобы мрамор не выглядел плоским веб-серым */
+  background-image:
+    radial-gradient(rgba(43,39,34,0.018) 1px, transparent 1px),
+    radial-gradient(rgba(43,39,34,0.012) 1px, transparent 1px);
+  background-size: 7px 7px, 13px 13px;
+  background-position: 0 0, 3px 4px;
+  min-height: 100%;
+}
+
+body {
+  /* мрамор слегка темнеет к «тихим часам» — день на глазах истекает (по-сенековски) */
+  transition: background-color 1.2s linear;
+}
+body.dusk { background-color: #ECE6DA; }
+
+.boot { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.boot-spinner {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--hairline); border-top-color: var(--ink);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#root { min-height: 100vh; }
+
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: max(6vh, 22px) 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ───────────────────────── Шапка ───────────────────────── */
+.header { display: flex; align-items: baseline; justify-content: space-between; }
+.header::after { /* волосок под шапкой */
+  content: ''; position: absolute; left: 0; right: 0; height: 1px;
+}
+.header-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 9px;
+}
+.brand {
+  font-family: var(--serif);
+  font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--muted); font-weight: 400;
+}
+.brand-sub {
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--hairline); font-weight: 400;
+}
+
+/* ───────────────────────── Указатель-задача ───────────────────────── */
+.signpost {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--ink); font-size: 14px;
+}
+.signpost .post-glyph { color: var(--muted); flex: 0 0 auto; }
+.signpost .task-input {
+  flex: 1 1 auto;
+  background: none; border: none; outline: none;
+  font: inherit; color: var(--ink);
+  border-bottom: 1px dashed transparent;
+  padding: 2px 1px;
+}
+.signpost .task-input::placeholder { color: var(--muted); font-style: italic; }
+.signpost .task-input:focus { border-bottom-color: var(--hairline); }
+
+/* ───────────────────────── Панель колодца ───────────────────────── */
+.well {
+  position: relative;
+  align-self: center;
+  width: 100%;
+  max-width: var(--panel-w);
+}
+.well svg {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--ink);
+  background: var(--marble-inset);
+  border-radius: var(--radius);
+}
+/* виньетка тревоги/падения поверх панели */
+.well .vignette {
+  position: absolute; inset: 0; pointer-events: none; border-radius: var(--radius);
+  box-shadow: inset 0 0 0 0 rgba(26,23,20,0);
+  transition: box-shadow 0.5s ease;
+}
+.well.rollback .vignette { box-shadow: inset 0 0 50px 8px rgba(168,92,59,0.22); }
+
+/* ───────────────────────── Стоическая строка ───────────────────────── */
+.stoic {
+  min-height: 3.4em;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 4px;
+  transition: opacity 0.25s ease;
+}
+.stoic .quote { font-style: italic; font-size: 21px; line-height: 1.45; color: var(--ink); }
+.stoic .attr { font-size: 13px; color: var(--ink-soft); }
+.stoic.flash .quote { color: var(--terracotta); }
+.stoic.dim { opacity: 0.15; }
+
+/* ───────────────────────── Главная кнопка ───────────────────────── */
+.action {
+  align-self: center; width: 100%; max-width: var(--panel-w);
+  min-height: 88px;
+  background: none;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-family: var(--serif);
+  font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.06s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+.action:hover { background: rgba(43,39,34,0.04); }
+.action:active { transform: translateY(1px); }
+.action:disabled { opacity: 0.4; cursor: default; }
+/* во время прокатки кнопка — «стоп»: залита чернилами */
+.action.running { background: var(--ink); color: var(--marble); border-color: var(--ink); }
+.action.running:hover { background: #1f1c18; }
+
+/* ───────────────────────── Метаданные ───────────────────────── */
+.meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum";
+}
+.meta .depth { letter-spacing: 0.02em; }
+.meta .timer { color: var(--ink-soft); }
+.meta .recovery { color: var(--terracotta); }
+.meta .recovery.zero { color: var(--muted); }
+
+/* ───────────────────────── Подвал ───────────────────────── */
+.footer {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--hairline); padding-top: 12px; margin-top: 2px;
+}
+.footer .checkin-in { font-style: italic; }
+.footer-btns { display: inline-flex; gap: 6px; }
+.icon-btn {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  font-size: 16px; padding: 4px; line-height: 1;
+}
+.icon-btn:hover { color: var(--ink); }
+
+/* ───────────────────────── Карточка вердикта / падения ───────────────────────── */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(26,23,20,0.0);
+  backdrop-filter: blur(0px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 22px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease, background-color 0.4s ease, backdrop-filter 0.4s ease;
+}
+.sheet-backdrop.show { opacity: 1; pointer-events: auto; background: rgba(26,23,20,0.42); backdrop-filter: blur(2px); }
+
+.card {
+  background: var(--marble);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  max-width: 460px; width: 100%;
+  padding: 28px 26px 22px;
+  box-shadow: 0 18px 60px rgba(26,23,20,0.28);
+  transform: translateY(14px);
+  transition: transform 0.4s cubic-bezier(.2,.7,.2,1);
+}
+.sheet-backdrop.show .card { transform: translateY(0); }
+
+.card .terracotta-rule {
+  height: 2px; background: var(--terracotta); border: none; margin: 0 0 18px;
+  width: 0; transition: width 0.3s ease 0.05s;
+}
+.sheet-backdrop.show .card .terracotta-rule { width: 100%; }
+
+.card h2 { font-size: 27px; line-height: 1.2; margin: 0 0 12px; font-weight: 400; }
+.card .patron-bust { font-size: 30px; line-height: 1; margin-bottom: 6px; }
+.card p { margin: 0 0 10px; color: var(--ink-soft); font-size: 15px; line-height: 1.55; }
+.card .verdict-quote { font-style: italic; color: var(--ink); font-size: 18px; line-height: 1.5; margin: 14px 0; }
+.card .verdict-quote .attr { display: block; font-style: normal; font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+.card .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+
+.btn {
+  font-family: var(--serif); font-size: 15px; cursor: pointer;
+  padding: 13px 16px; border-radius: var(--radius);
+  border: 1px solid var(--ink); background: none; color: var(--ink);
+  transition: background-color 0.12s ease, color 0.12s ease;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.btn:hover { background: rgba(43,39,34,0.05); }
+.btn.primary { background: var(--ink); color: var(--marble); }
+.btn.primary:hover { background: #1f1c18; }
+.btn.go { border-color: var(--sage); }
+.btn.go.primary { background: var(--sage); border-color: var(--sage); color: #20281f; }
+
+.card .countdown { font-variant-numeric: tabular-nums; color: var(--terracotta); }
+
+/* ───────────────────────── Лист настроек / зеркало дня ───────────────────────── */
+.settings .card { max-width: 480px; max-height: 86vh; overflow-y: auto; overflow-x: hidden; text-align: left; }
+.settings .row { flex-wrap: wrap; }
+.settings .time-input, .settings select { max-width: 100%; }
+.settings h2 { font-size: 22px; }
+.settings .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--hairline); }
+.settings .row:last-of-type { border-bottom: none; }
+.settings .row .label { font-size: 14px; color: var(--ink); }
+.settings .row .hint { font-size: 12px; color: var(--muted); display: block; margin-top: 2px; }
+.settings .row .ctl { flex: 0 0 auto; }
+.settings .disclaimer { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-top: 14px; font-style: italic; }
+.settings .warden { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+.switch { display: inline-block; position: relative; width: 44px; height: 24px; flex: 0 0 auto; cursor: pointer; vertical-align: middle; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch .track { position: absolute; inset: 0; background: #BDB6A6; border-radius: 999px; transition: background-color 0.2s ease; }
+.switch .thumb { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: var(--marble); border-radius: 50%; transition: transform 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.switch input:checked + .track { background: var(--ink); }
+.switch input:checked + .track + .thumb { transform: translateX(20px); }
+
+.time-input { font: inherit; font-size: 13px; border: 1px solid var(--hairline); border-radius: var(--radius); padding: 4px 6px; background: var(--marble); color: var(--ink); }
+.link-btn { background: none; border: none; color: var(--ink-soft); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; padding: 0; }
+
+/* статистика — график по дням + журнал */
+.mirror { margin-top: 16px; }
+.mirror h3 { font-size: 13px; letter-spacing: 0.04em; color: var(--ink); margin: 0 0 6px; font-weight: 400; }
+.mirror-cap { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.45; }
+.mirror svg { display: block; width: 100%; height: auto; }
+
+.stats-card { max-width: 480px; }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 6px 0 16px; }
+.tile { border: 1px solid var(--hairline); border-radius: var(--radius); padding: 12px 14px; }
+.tile-v { font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tile-l { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-top: 2px; }
+
+.log { display: flex; flex-direction: column; }
+.log-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--hairline); font-size: 13px; }
+.log-row:last-child { border-bottom: none; }
+.log-when { color: var(--muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; min-width: 92px; }
+.log-dur { color: var(--terracotta); flex: 0 0 auto; font-variant-numeric: tabular-nums; min-width: 56px; }
+.log-task { color: var(--ink-soft); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-del { background: none; border: none; color: var(--hairline); cursor: pointer; font-size: 13px; padding: 2px 4px; flex: 0 0 auto; }
+.log-del:hover { color: var(--terracotta); }
+.lifetime { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+
+/* всплывающий баннер (нет места в хранилище / уведомления отклонены) */
+.banner {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px);
+  max-width: 92vw; background: var(--ink); color: var(--marble);
+  font-size: 13px; padding: 10px 16px; border-radius: 999px; z-index: 60;
+  opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+.banner.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* падающий оливковый лист — награда «поймал себя» */
+.leaf {
+  position: fixed; z-index: 50; pointer-events: none; font-size: 22px;
+  left: 50%; top: 30%;
+  animation: leaf-fall 2.4s ease-in forwards;
+}
+@keyframes leaf-fall {
+  0% { opacity: 0; transform: translate(-50%,-30px) rotate(-20deg); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 60vh) rotate(220deg); }
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 420px) {
+  .stoic .quote { font-size: 19px; }
+  .card h2 { font-size: 23px; }
+}
+
+/* уважение к prefers-reduced-motion — мгновенные смены вместо анимаций */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
+}
