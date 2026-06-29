@@ -38,8 +38,8 @@ var COPY = {
   tagline: 'Поймал себя — Сизиф покатил камень. Катит, пока ты не вернёшься к делу.',
   intro: 'Поймал себя на прокрастинации — жми «Я прокрастинирую». Сизиф возьмётся за камень и будет катить его в гору, пока ты не нажмёшь «Вернулся к делу». Камень всё равно сорвётся вниз — но смотреть на это не обязательно. — твой сторож',
   taskPlaceholder: 'что ты сейчас откладываешь? (Сизиф запомнит)',
-  startBtn: 'Я прокрастинирую',
-  stopBtn: 'Вернулся к делу',
+  startBtn: 'Старт',
+  stopBtn: 'Стоп',
   idle: 'Гора пуста, камень внизу, дозор спокоен. Жми, когда поймаешь себя.',
   rolling: [
     'Сизиф катит. Ты — откладываешь.',
@@ -379,11 +379,10 @@ function buildUI() {
   root.innerHTML = '';
   var wrap = el('div', { class: 'wrap minimal' });
 
-  // только сцена + кнопка. Доступ к статистике/настройкам — малозаметные иконки в углу.
+  // сцена + кнопка СТАРТ/СТОП + явная кнопка статистики; настройки — иконка в углу.
   var well = el('div', { class: 'well' }, [buildSvg(), el('div', { class: 'vignette' })]);
   els.well = well;
   var corner = el('div', { class: 'corner' }, [
-    el('button', { class: 'corner-btn', type: 'button', 'aria-label': 'статистика', title: 'статистика', text: '▦', onclick: openStats }),
     el('button', { class: 'corner-btn', type: 'button', 'aria-label': 'настройки', title: 'настройки', text: '⚙', onclick: openSettings }),
   ]);
   well.appendChild(corner);
@@ -392,7 +391,9 @@ function buildUI() {
   els.action = action;
   wireAction(action);
 
-  appendKids(wrap, [well, action]);
+  var statsBtn = el('button', { class: 'subaction', type: 'button', text: 'Статистика', onclick: openStats });
+
+  appendKids(wrap, [well, action, statsBtn]);
   root.appendChild(wrap);
 
   els.sr = el('div', { class: 'sr-only', 'aria-live': 'assertive' });

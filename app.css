@@ -44,6 +44,20 @@ html, body {
 .wrap.minimal { min-height: 100vh; justify-content: center; }
 .well { position: relative; align-self: center; width: 100%; max-width: 440px; }
 .action { align-self: center; width: 100%; max-width: 440px; }
+.wrap.minimal { gap: 18px; }
+.subaction {
+  align-self: center; width: 100%; max-width: 440px;
+  background: var(--paper); color: var(--ink);
+  border: 2.5px solid var(--ink); border-radius: var(--radius);
+  box-shadow: 5px 5px 0 var(--ink);
+  font-family: var(--mono); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer;
+  padding: 13px 16px; margin-top: -6px;
+  transition: transform .07s ease, box-shadow .07s ease, background .12s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.subaction:hover { background: #fbf6ea; }
+.subaction:active { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--ink); }
 
 /* ───────────────────────── Панель сцены ───────────────────────── */
 .well {
